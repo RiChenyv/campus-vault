@@ -147,7 +147,7 @@ if (!up) {
 
     /* 先建一门和表格里课程号一致的课 —— 导入时它必须被自动关联上 */
     const mkCourse = await me.req('POST', '/api/courses', {
-      name: '通识示例课程四', code: '1131021019', term: '2025-2026学年 秋季学期', credit: 2,
+      name: '示例课程01', code: '9000000001', term: '2025-2026学年 秋季学期', credit: 2,
     })
     check('建了一门测试课程', j(mkCourse)?.ok === true, JSON.stringify(j(mkCourse)?.error))
 
@@ -232,25 +232,25 @@ if (!up) {
     eq_('★ 汇总：已修学分 66.5', j(listed)?.data?.summary?.credit, 66.5)
     eq_('★ 汇总：已出分 29 门', j(listed)?.data?.summary?.count, 29)
 
-    const first = rows.find((r) => r.courseCode === '1131021019')
-    check('★ 第一条落库内容正确', first?.courseName === '通识示例课程四', String(first?.courseName))
+    const first = rows.find((r) => r.courseCode === '9000000001')
+    check('★ 第一条落库内容正确', first?.courseName === '示例课程01', String(first?.courseName))
     eq_('  · 学期', first?.term, '2025-2026学年 秋季学期')
-    eq_('  · 成绩 95.0 → "95"', first?.score, '95')
-    eq_('  · scoreNum = 95', first?.scoreNum, 95)
+    eq_('  · 成绩 88.0 → "88"', first?.score, '88')
+    eq_('  · scoreNum = 88', first?.scoreNum, 88)
     eq_('  · 学分 2.0 → 2', first?.credit, 2)
-    eq_('  · 绩点 3.95', first?.gpa, 3.95)
+    eq_('  · 绩点 3.04', first?.gpa, 3.04)
     eq_('  · 课程类别', first?.category, '通识教育核心课')
     eq_('  · 课程性质', first?.nature, '任选')
     eq_('  · 修读方式', first?.mode, '正常')
-    eq_('  · 考试日期', first?.examDate, '2026-01-05')
+    eq_('  · 考试日期', first?.examDate, '2026-01-10')
     eq_('  · 重修重考', first?.retake, '正常')
     eq_('  · 是否主修', first?.isMajor, true)
     check('  · 关联到了课程', !!first?.courseId, String(first?.courseId))
 
     /* 空「是否主修」的行 → false（不是"未知"） */
-    const majorBlank = rows.find((r) => r.courseName === '马克思主义基本原理')
+    const majorBlank = rows.find((r) => r.courseCode === '9000000021')
     eq_('空「是否主修」落库为 false', majorBlank?.isMajor, false)
-    eq_('那条成绩照样对', majorBlank?.score, '91')
+    eq_('那条成绩照样对', majorBlank?.score, '95')
 
     /* 导入历史 */
     const logs = await me.req('GET', '/api/import/log')
@@ -275,7 +275,7 @@ if (!up) {
 
     /* ------------------------- 手改不被覆盖 ------------------------- */
     section('手改过的学分：下一次导入只补空字段')
-    const target = (j(listed2)?.data?.grades ?? []).find((r) => r.courseCode === '1131021019')
+    const target = (j(listed2)?.data?.grades ?? []).find((r) => r.courseCode === '9000000001')
     const patched = await me.req('PATCH', `/api/grades/${target.id}`, { credit: 9, gpa: 1.23 })
     check('手改学分/绩点成功', j(patched)?.ok === true, JSON.stringify(j(patched)?.error))
     eq_('改完立刻生效', (j(patched)?.data?.grades ?? []).find((r) => r.id === target.id)?.credit, 9)
@@ -288,7 +288,7 @@ if (!up) {
     const after = (await me.req('GET', '/api/grades')).json?.data?.grades ?? []
     const kept = after.find((r) => r.id === target.id)
     eq_('★ 手改的学分 9 没有被 2 顶回去', kept?.credit, 9)
-    eq_('★ 手改的绩点 1.23 没有被 3.95 顶回去', kept?.gpa, 1.23)
+    eq_('★ 手改的绩点 1.23 没有被 3.04 顶回去', kept?.gpa, 1.23)
 
     /* ------------------------- 缺列报错 ------------------------- */
     section('缺必须列 → 明确报错（不猜）')
@@ -330,10 +330,10 @@ if (!up) {
     const shRows = (await other2.req('GET', '/api/grades')).json?.data?.grades ?? []
     eq_('共享字符串：查库 29 条', shRows.length, 29)
     eq_('共享字符串：课程名解出来了',
-      shRows.find((r) => r.courseCode === '1131021019')?.courseName,
-      '通识示例课程四')
+      shRows.find((r) => r.courseCode === '9000000001')?.courseName,
+      '示例课程01')
     eq_('★ 共享字符串与内联两条路结果一致（学分）',
-      shRows.find((r) => r.courseCode === '1131021019')?.credit, 2)
+      shRows.find((r) => r.courseCode === '9000000001')?.credit, 2)
 
     const realBuf = readRealXlsxBuffer()
     if (!realBuf) {

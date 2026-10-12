@@ -124,7 +124,7 @@ await sleep(700)
 for (const [k, v] of [
   ['姓名', '时晨翔'],
   ['学号', '2023010101'],
-  ['学院', '计算机与网络空间安全学院'],
+  ['学院', '示例学院一'],
   ['专业', '计算机科学与技术'],
   ['年级', '2023'],
   ['班级', '计科2301'],
@@ -140,7 +140,7 @@ const saved = schoolOf(USER)
 console.log('  数据库里:', JSON.stringify(saved))
 check('姓名存进了服务端', saved.real_name === '时晨翔', String(saved.real_name))
 check('学号存进了服务端', saved.student_id === '2023010101', String(saved.student_id))
-check('学院存进了服务端', saved.college === '计算机与网络空间安全学院', String(saved.college))
+check('学院存进了服务端', saved.college === '示例学院一', String(saved.college))
 check('专业存进了服务端', saved.major === '计算机科学与技术', String(saved.major))
 check('年级存进了服务端', saved.grade === '2023', String(saved.grade))
 check('班级存进了服务端', saved.class_name === '计科2301', String(saved.class_name))

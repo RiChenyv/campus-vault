@@ -70,7 +70,7 @@ const CARD = `<!doctype html><html><head><meta charset="utf-8"></head>
 <body>
   <div class="side">
     <div class="uname">时晨翔 <i class="caret"></i></div>
-    <div class="college" title="计算机与网络空间安全学院">计算机与网络空间安...</div>
+    <div class="college" title="示例学院一">计算机与网络空间安...</div>
     <div class="today">今日课表　周课表</div>
     <div>3-4 节：示例课程　某实验室</div>
     <div>5-6 节：通识示例课程二　四十八教</div>
@@ -118,7 +118,7 @@ check('文本里能看到 iframe 的内容', /时晨翔/.test(data.debug?.sample
 
 check('**姓名解析出来了**（来自 iframe）', data.profile.realName === '时晨翔', String(data.profile.realName))
 check('**学院解析出来了**（来自 title 属性）',
-  /计算机与网络空间安全学院/.test(data.profile.college), String(data.profile.college))
+  /示例学院一/.test(data.profile.college), String(data.profile.college))
 
 console.log('')
 console.log('=== 采集到的文本（前 300 字）===')

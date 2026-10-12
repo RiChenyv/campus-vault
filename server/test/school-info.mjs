@@ -109,13 +109,13 @@ check('全空时字段显示「未填」占位', r.snippet.includes('未填'), r
 /* ── 场景 2：只有一个字段 ── */
 console.log('')
 console.log('=== 场景 2：只填一个字段（学院）===')
-setFields({ college: '计算机与网络空间安全学院', imported_at: Date.now() })
+setFields({ college: '示例学院一', imported_at: Date.now() })
 await send('Page.navigate', { url: 'http://127.0.0.1:5174/' })
 await sleep(3500)
 r = await schoolBlockVisible()
 console.log('  ', r.has ? r.snippet : '(没有这块)')
 check('**只要有一个字段就显示**（不是要填满才显示）', r.has === true, r.has ? '' : '没显示')
-check('显示的是实际填的那个值', r.snippet.includes('计算机与网络空间安全学院'), r.snippet.slice(0, 80))
+check('显示的是实际填的那个值', r.snippet.includes('示例学院一'), r.snippet.slice(0, 80))
 
 /* ── 场景 3：改回全空，确认能恢复 ── */
 console.log('')

@@ -73,7 +73,7 @@ setTimeout(function(){
     '<div class="side"><div class="avatar"></div><div class="uname">晨翔</div><div class="role">学生</div></div>' +
     '<div class="card"><div class="title">2131010006-基础示例课程二[02]</div>' +
     '<div>课程代码：202620271213101000602</div>' +
-    '<div>数据科学与智能媒体学院　开课：2026-09-07</div>' +
+    '<div>示例学院二　开课：2026-09-07</div>' +
     '<div>必选修别：必修　学分数：4.0　授课教师：王老师</div>' +
     '<div class="term">2026-2027第1学期</div></div>';
 }, 800);
