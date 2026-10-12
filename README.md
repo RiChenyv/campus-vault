@@ -1,4 +1,4 @@
-# Campus Vault
+﻿# Campus Vault
 
 本地个人课程知识库 —— **液态玻璃（Liquid Glass）UI + Node 后端**。
 
@@ -15,6 +15,19 @@
 
 ## 快速开始
 
+### Windows：双击就能跑
+
+| 文件 | 作用 |
+|---|---|
+| **`启动网站.bat`** | 一键起前后端（开发模式，改代码立刻生效），并自动打开浏览器。**关掉窗口 = 停止网站** |
+| **`创建桌面快捷方式.bat`** | 在桌面生成「Campus Vault」快捷方式，指向本项目里的 `启动网站.bat`。用的是脚本所在目录（`%~dp0`），所以换目录/换盘符都不用改 |
+| `上线启动.bat` | 起**生产形态**（后端直接提供构建好的网页）+ Cloudflare 隧道，给一个 https 公网网址。见 `上线部署.md` |
+
+> 仓库里**不放 `.lnk` 文件**：它是二进制，里面记着创建它的那台机器的绝对路径、卷序列号和用户名 ——
+> 换台电脑就失效，还会把别人的机器信息带进仓库。所以用「创建桌面快捷方式.bat」现场生成。
+
+### 手动启动（跨平台）
+
 ```bash
 pnpm install
 
@@ -28,6 +41,10 @@ pnpm --filter campus-vault-server dev # 后端 5175
 | 账号 | 密码 |
 |---|---|
 | `admin` | `Cv-Dev-Only-2026` |
+
+> ⚠️ 这个默认密码只用于本机开发。**对外部署时后端会检查它有没有被改过**，
+> 没改就拒绝启动（见 `server/src/lib/deploy.ts` 的守卫，和 `上线部署.md`）。
+> 改密码：网站个人中心，或 `node server/tools/set-password.mjs '新密码'`。
 
 也可以点「账号注册」自己开一个 —— 密码需满足规则（≥8 位、含大小写、含数字、
 无连续重复或 `abc`/`123` 这类顺序字符），账号由服务端生成 11 位随机数。
@@ -44,7 +61,7 @@ pnpm --filter campus-vault-server dev # 后端 5175
 ## 测试
 
 ```bash
-pnpm --filter campus-vault-server test        # 接口测试 81 项（自动重置库+起服务）
+pnpm --filter campus-vault-server test        # 接口测试 105 项（自动重置库+起服务）
 node server/test/e2e.mjs                      # 端到端：认证 + 题库文件（需前后端都在跑）
 node server/test/e2e-data.mjs                 # 端到端：灵感 / 待办 / 书签
 ```
@@ -174,21 +191,52 @@ src/                        前端
 
 server/                     后端
   src/
-    index.ts                入口：路由挂载、CORS、优雅退出
-    db.ts                   SQLite 连接 + 4 版迁移（WAL + 外键）
+    index.ts                入口：路由挂载、CORS、生产静态托管、优雅退出
+    db.ts                   SQLite 连接 + 迁移（只追加，不回头改）
     lib/
       http.ts               统一响应/错误约定
       auth.ts               scrypt 哈希、会话、失败锁定、限流
       storage.ts            落盘、magic bytes 校验、路径安全
       activity.ts           活动流水 + 按天聚合
-    routes/                 auth / files / data / github
-  test/
-    api.test.mjs            81 项接口测试
-    run.mjs                 测试运行器（重置库 + 起服务 + 跑测试）
-    e2e.mjs                 端到端：认证 + 题库文件
-    e2e-data.mjs            端到端：灵感 / 待办 / 书签
-  data/                     运行时生成：vault.db + files/
+      deploy.ts             上线开关与守卫（公网/隧道部署的启动检查）
+      inject.ts             油猴脚本产物组装（parse.js + userscript.js）
+      xlsx.ts               零依赖 xlsx 解析（解 zip + 读表）
+      gradesXlsx.ts         成绩表格的列识别
+      timetableXlsx.ts      课表表格 → 课程 + 时间段（单双周/多时段/跨行去重）
+      timetableImport.ts    课表类导入的共用落库（WakeUp / ICS / xlsx 三边共用）
+      grades.ts / ics.ts / wakeup.ts / courseMatch.ts / importAuth.ts / importSnapshot.ts
+    routes/                 auth / files / data / import / inject / github
+  inject/                   school 页面上的解析规则 + 油猴脚本外壳 + VERSION
+  tools/                    命令行工具（改密码、导入课表、脚本自检）
+  test/                    测试（下面详列）
+  data/                    运行时生成：vault.db + files/（**不进仓库**）
 ```
+
+## 测试
+
+```bash
+pnpm --filter campus-vault-server test     # 接口测试 105 项（自动重置库 + 起服务）
+```
+
+不需要后端、随时可跑的纯逻辑测试：
+
+| 文件 | 验什么 |
+|---|---|
+| `folder-tree.mjs` | 资料库目录树（嵌套、自然序、递归计数、脏路径） |
+| `profile-stats.mjs` | 个人中心口径（连续记录、本周起点，含跨天/跨月边界） |
+| `timetable-parse.mjs` | 课表 xlsx 解析（多时段、单双周、跨行去重、学期归一化） |
+| `xlsx-parse.mjs` | 零依赖 xlsx 解析（实体解码、共享字符串、坏文件给人话） |
+| `grades-parse.mjs` | 成绩表格解析（列识别、缺列、异常值） |
+| `deploy-guards.mjs` | 上线守卫（密码/注册/静态托管/cookie Secure/health 泄露） |
+| `reality-dates.mjs` | 月历与周次（月份边界、跨年） |
+| `jw-parse.mjs` | 教务页面识别（用假页面跑油猴解析规则） |
+
+自起隔离后端的：`timetable-api.mjs`、`grades-api.mjs`、`grades-xlsx-api.mjs`、`run.mjs`（跑 `api.test.mjs`）。
+需要网站正在运行的端到端：`e2e.mjs`、`e2e-data.mjs`、`qbank-*.mjs`、`notes-*.mjs`、`ui-sweep.mjs` 等。
+
+> 有些测试会读**本机教务系统导出的真文件**（成绩表 / 课表 xlsx）来和夹具对照。
+> 文件不在就打印 `SKIP`（不算失败）；路径默认取当前用户的「下载」目录，
+> 可用 `CV_GRADES_XLSX` / `CV_TIMETABLE_XLSX` 指定，或用 `CV_REAL=1` 打开那段对照。
 
 ## 后端设计要点
 
