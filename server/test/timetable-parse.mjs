@@ -40,13 +40,13 @@ for (const c of parsed.courses) {
 }
 
 check('学期归一化：`2026-2027学年 秋季学期课表` → `2026-2027第1学期`', parsed.term === '2026-2027第1学期', parsed.term)
-/* 手算：网络空间安全(1) + 通识示例课程二(2: 单周/双周) + 基础示例课程二(1)
-        + 数据库原理(1) + 渗透测试(1) = 6 条；
+/* 手算：专业示例课程一(1) + 通识示例课程二(2: 单周/双周) + 基础示例课程二(1)
+        + 专业示例课程三(1) + 专业示例课程四(1) = 6 条；
         通识示例课程二在 3-4节 与 5-6节 两行重复 1 条、
-        渗透测试在 9-10节 与 11-12节 两行重复 1 条 → 共去重 2 条 */
+        专业示例课程四在 9-10节 与 11-12节 两行重复 1 条 → 共去重 2 条 */
 check('时间段 6 条', parsed.slotCount === 6, String(parsed.slotCount))
 check('跨行重复被去掉 2 条', parsed.deduped === 2, String(parsed.deduped))
-/* 手算：网络空间安全 / 通识示例课程二 / 基础示例课程二 / 数据库原理 / 渗透测试 = 5 门 */
+/* 手算：专业示例课程一 / 通识示例课程二 / 基础示例课程二 / 专业示例课程三 / 专业示例课程四 = 5 门 */
 check('课程 5 门', parsed.courses.length === 5, `${parsed.courses.length}：` + parsed.courses.map((c) => c.name).join(' / '))
 
 const byName = new Map(parsed.courses.map((c) => [c.name, c]))

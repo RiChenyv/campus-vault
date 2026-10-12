@@ -521,8 +521,8 @@ async function verifyImportUi({ appUrl, xlsx, check, section, dataDir }) {
       (txt.match(/[^\n]*新增[^\n]*/) ?? ['(没有)'])[0])
     check('★ 预览显示「已忽略 8 列不需要的信息」', /已忽略 8 列不需要的信息/.test(txt),
       (txt.match(/[^\n]*已忽略[^\n]*/) ?? ['(没有)'])[0])
-    check('预览列出了识别到的课程（实体解码后是中文）', /浓缩的世界史/.test(txt),
-      (txt.match(/[^\n]*浓缩[^\n]*/) ?? ['(没有)'])[0])
+    check('预览列出了识别到的课程（实体解码后是中文）', /示例课程01/.test(txt),
+      (txt.match(/[^\n]*示例课程[^\n]*/) ?? ['(没有)'])[0])
     check('★ 上传即预览——预览阶段只发 1 次请求（dryRun，没写库）',
       posts.length === 1 && posts[0] === 'POST', JSON.stringify(posts))
 
@@ -560,7 +560,7 @@ async function verifyImportUi({ appUrl, xlsx, check, section, dataDir }) {
     await ev(`(function(){var b=Array.prototype.slice.call(document.querySelectorAll('button')).filter(function(x){return (x.getAttribute('aria-label')||'').indexOf('在修课程')>=0})[0]; if(b) b.click(); return !!b})()`)
     await sleep(3000)
     const creditsTxt = await ev(`document.body.innerText`)
-    check('★ 导入的数据在学分总览上正常显示', /浓缩的世界史/.test(creditsTxt),
+    check('★ 导入的数据在学分总览上正常显示', /示例课程01/.test(creditsTxt),
       creditsTxt.slice(0, 80).replace(/\n/g, ' '))
     check('★ 字段齐全 → 不该出现「未收集」', !/未收集/.test(creditsTxt),
       (creditsTxt.match(/[^\n]*未收集[^\n]*/g) ?? []).slice(0, 2).join(' | '))

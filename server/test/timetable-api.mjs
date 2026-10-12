@@ -144,7 +144,7 @@ check('合并到的是**已有那一条**（学期没有被改写）', kept?.ter
 
 const slots1 = await slotsOf()
 check('时间段一共 6 条', slots1.length === 6, String(slots1.length))
-check('合并进来的课也拿到了时间段（网络空间安全 1 条）',
+check('合并进来的课也拿到了时间段（专业示例课程一 1 条）',
   slots1.filter((s) => String(s.course_name ?? '').includes('专业示例课程一')).length === 1,
   JSON.stringify(slots1.map((s) => s.course_name)))
 check('单双周两个教室都写进去了',
