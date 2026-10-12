@@ -1,0 +1,19 @@
+packages:
+  - '.'
+  # 后端与前端同仓：共用一份扁平 node_modules，
+  # 一条 pnpm install 装完两边，也避免嵌套目录被 pnpm 当成独立项目。
+  - 'server'
+
+# Vite 的配置加载器会在 vite 包内部执行 import('rollup') / import('picomatch')。
+# pnpm 默认的隔离布局（junction + 严格 node_modules）在 Windows + Node 24 下
+# 会让这些解析失败（ERR_MODULE_NOT_FOUND），因此改为扁平布局（npm 同款）。
+# 注意：键名必须是 camelCase，写成 node-linker 会被静默忽略。
+nodeLinker: hoisted
+
+# 沙箱内用户级 npm 缓存不可写，统一使用工作区内的存储目录
+storeDir: .pnpm-store
+
+# esbuild 的 postinstall 只是写缓存文件，平台二进制已由 @esbuild/win32-x64 提供，
+# 因此显式拒绝执行构建脚本，既消掉警告也不影响 vite 运行。
+allowBuilds:
+  esbuild: false

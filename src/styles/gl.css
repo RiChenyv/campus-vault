@@ -1,0 +1,909 @@
+@import 'tailwindcss';
+
+/* ==========================================================================
+   Campus Vault · 液态玻璃设计系统（单文件，故意不拆分）
+   --------------------------------------------------------------------------
+   为什么是一个文件：Tailwind v4 不会内联本项目自己的 @import './x.css'，
+   拆分后样式会整块丢失（已实测）。单文件同时保证分层顺序一目了然。
+
+   分层原则：
+     1. 环境层   深色 mesh 渐变 + 噪点（玻璃的折射对象，没有它玻璃就是灰的）
+     2. 折射层   SVG feTurbulence 位移滤镜（只给圆环用，最贵的一层）
+     3. 玻璃本体  backdrop-filter blur + saturate + 上亮下暗描边 + 顶部内高光
+     4. 高光层   跟随鼠标的镜面反光
+
+   可读性铁律：玻璃只承载「标题 / 图标 / 短标签」，
+              长文本一律落在 .mat / .deco 这类不透明或高遮罩面板上。
+
+   ⚠️ 关键：自定义样式必须写在 @layer 内。
+   无层级（unlayered）样式在 CSS 级联中优先于任何 @layer 内的样式，
+   而 Tailwind 的 utilities 位于 @layer utilities —— 一旦把 .glass 写在层外，
+   它的 position/display 就会压掉 absolute/grid 等工具类，
+   表现为"类名明明在，样式却不生效"。
+   ========================================================================== */
+
+@theme {
+  --color-ink: #f2f4ff;
+  --color-ink-dim: #b3b9d8;
+  --color-ink-faint: #7e85a6;
+  --color-line: rgba(255, 255, 255, 0.11);
+  --color-accent: #8fb2ff;
+  --font-sans: 'Inter', 'HarmonyOS Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: dark;
+  --acc: 143 178 255;
+  --acc2: 176 140 255;
+  --q: 1;
+  /* 首页簇（圆环 + 胶囊）的整体缩放系数，由 useUiScale 按视口宽高写到 :root 上。
+     所有尺寸都写成 calc(基准值 * var(--ui-scale))，改一个数就能整体放大。 */
+  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.62'/%3E%3C/svg%3E");
+}
+
+/* ==========================================================================
+   基础层
+   ========================================================================== */
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    height: 100%;
+    background: #07070f;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow: hidden;
+  }
+
+  #root {
+    height: 100%;
+  }
+
+  ::selection {
+    background: rgba(143, 178, 255, 0.35);
+  }
+
+  /* 焦点环：不要在这里设 border-radius，
+     否则任何聚焦元素（含方形面板）都会被强制变成胶囊形 */
+  :focus-visible {
+    outline: 2px solid rgba(190, 210, 255, 0.9);
+    outline-offset: 3px;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.16);
+    border-radius: 99px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.28);
+    background-clip: content-box;
+  }
+}
+
+/* ==========================================================================
+   组件层
+   ========================================================================== */
+
+@layer components {
+  /* ---------------------------- 1. 环境层 ----------------------------
+     自下而上共 7 层，壁纸沉在**最底下**，由上层渐变雾化出朦胧感：
+       1 .wall        壁纸照片（降饱和 + 提亮，先弱化照片本身的存在感）
+       2 .wall-fog    雾化层：白色径向柔光，糊掉放大痕迹，制造「隔着雾看」
+       3 .amb-mesh    原本的 mesh 渐变（半透明叠加，壁纸从缝里透出来）
+       4 .wall-grade  暗角调色：压住右侧巫师剪影，保证 UI 可读
+       5 .amb-blob    缓慢流动的彩色光团，给玻璃提供折射对象
+       6 .grid-faint  极细网格
+       7 .grain       噪点，消除大面积渐变的色带
+
+     ⚠️ 第 3 层的透明度就是「朦胧度」的旋钮：
+        越透 → 壁纸越清楚；越实 → 越朦胧。现在是 0.74~0.86，壁纸属于若隐若现的底纹。 */
+  .amb {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+    background: #07070f; /* 兜底底色 */
+  }
+
+  /* 首页分页：一屏一页。
+     翻页由 JS 控制（滚轮 / 键盘），容器本身不滚动 ——
+     试过原生 scroll-snap，合成滚轮事件下 scrollTop 会在两页之间反复跳
+     （实测序列 [566,0,566,0,566,1181,1560]），而且"必须滚够一屏"的规则
+     在 3.4:1 的超宽屏上很奇怪：一次滚轮只走 100px，剩下的距离很尴尬。
+     自己控制后：一次滚轮 = 翻一页，动画可预期。 */
+  .home-pager {
+    overflow: hidden;
+  }
+
+  .home-pager > section {
+    height: 100%;
+    width: 100%;
+  }
+
+  /* 1. 壁纸（最底层）
+     支持两张图交叉淡入：两张都常驻、只切 opacity。
+     用 background-image 过渡是**不行**的（不可插值，会硬切）。 */
+  .wall {
+    position: absolute;
+    inset: 0;
+  }
+
+  .wall-img {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    opacity: 0;
+    transition: opacity 0.7s ease;
+    transform: scale(1.02); /* 配合模糊，避免边缘出现透明缝 */
+  }
+
+  .wall-img.is-on {
+    opacity: 1;
+  }
+
+  /* 夜空的巫师剪影重心在右侧，取景框往右偏 */
+  .wall-img--night {
+    background-image: url('/wallpaper/night-sky.jpg');
+    background-position: 68% 42%;
+    /* 原图分辨率不高，降饱和 + 提亮 + 极轻模糊，把照片降级成氛围底纹 */
+    filter: blur(0.6px) saturate(0.82) brightness(1.1);
+  }
+
+  /* 梦境天空：粉紫云海 + 城堡，主体偏中左，取景框居中略偏左。
+     压暗幅度比夜空大（0.68 vs 1.1）—— 这张图整体很亮，
+     直接透上来会把面板上的白字吃掉（实测过对比度不足）。
+     保住色相与通透感，只降明度。 */
+  .wall-img--dream {
+    background-image: url('/wallpaper/dream-sky.jpg');
+    background-position: 42% 46%;
+    filter: blur(0.5px) saturate(1.04) brightness(0.68);
+  }
+
+  /* 星夜魔女：深蓝夜空 + 粉云 + 亮星，整体明度接近夜空那张，
+     但细节更碎，稍微压暗一点让面板上的白字稳住。 */
+  .wall-img--mission {
+    background-image: url('/wallpaper/star-witch.jpg');
+    background-position: 62% 40%;
+    filter: blur(0.5px) saturate(1.05) brightness(0.8);
+  }
+
+  /* 花海：粉红花田 + 白衣少女，主体偏中右。
+     这张最亮（大面积高饱和粉色），压暗幅度最大，否则面板上的字全糊。 */
+  .wall-img--archive {
+    background-image: url('/wallpaper/flower-field.jpg');
+    background-position: 58% 52%;
+    filter: blur(0.5px) saturate(0.98) brightness(0.62);
+  }
+
+  /* 林间魔女：逆光特写，人脸居中偏左，光斑在右下。
+     这张明暗对比极强（亮部接近纯白、暗部接近全黑），压暗要克制，
+     否则逆光的光斑感就没了；取景框略偏左把人脸放稳。 */
+  .wall-img--qbank {
+    background-image: url('/wallpaper/forest-witch.jpg');
+    background-position: 44% 42%;
+    filter: blur(0.5px) saturate(1.02) brightness(0.72);
+  }
+
+  /* 第七页（日历 / 回望）：日出玫瑰田。
+     按用户要求**不做压暗**，直接用原图（brightness 1）。
+     注意：这张图平均亮度 132/255，是夜空图（约 40）的 3.3 倍，
+     不压暗时面板后的底色会亮很多，文字对比度靠面板自身的薄暗底兜底。 */
+  .wall-img--retro {
+    background-image: url('/wallpaper/rose-field.jpg');
+    background-position: 46% 40%;
+    filter: none;
+  }
+
+  /* 登录页：花坡上的魔女背影 + 银河。剪影偏右，取景框右偏一点。
+     登录页没有面板遮挡，可以留亮一些，让星空与萤火看得清。 */
+  .wall-img--login {
+    background-image: url('/wallpaper/login-night.jpg');
+    background-position: 58% 46%;
+    filter: blur(0.4px) saturate(1.08) brightness(0.92);
+  }
+
+  /* 星海魔女：深蓝夜海 + 荧光倒影，剪影居中。
+     这张本身就偏暗，不用压太多；取景稍微下移，把倒影和水面反光留在画面里。 */
+  .wall-img--connect {
+    background-image: url('/wallpaper/star-sea.jpg');
+    background-position: 50% 58%;
+    filter: blur(0.5px) saturate(1.06) brightness(0.86);
+  }
+
+  /* 2. 雾化层 */
+  .wall-fog {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(120% 90% at 50% 55%, rgba(214, 226, 255, 0.14) 0%, rgba(214, 226, 255, 0) 62%),
+      radial-gradient(80% 60% at 18% 30%, rgba(150, 170, 255, 0.1) 0%, rgba(150, 170, 255, 0) 70%);
+  }
+
+  /* 3. 原本的 mesh 渐变，改成半透明叠加 */
+  .amb-mesh {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(120% 90% at 12% 6%, rgba(27, 23, 64, 0.86) 0%, rgba(27, 23, 64, 0) 55%),
+      radial-gradient(100% 80% at 92% 12%, rgba(16, 41, 77, 0.78) 0%, rgba(16, 41, 77, 0) 50%),
+      radial-gradient(120% 100% at 70% 104%, rgba(13, 58, 69, 0.82) 0%, rgba(13, 58, 69, 0) 58%),
+      linear-gradient(160deg, rgba(11, 11, 28, 0.86) 0%, rgba(7, 7, 15, 0.74) 48%, rgba(5, 5, 12, 0.8) 100%);
+  }
+
+  /* 4. 暗角调色 */
+  .wall-grade {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba(6, 7, 16, 0.34) 0%, rgba(6, 7, 16, 0) 28%, rgba(6, 7, 16, 0.3) 100%),
+      radial-gradient(145% 115% at 62% 46%, rgba(5, 6, 14, 0) 44%, rgba(5, 6, 14, 0.52) 100%),
+      linear-gradient(102deg, rgba(6, 7, 16, 0.32) 0%, rgba(6, 7, 16, 0.04) 40%, rgba(6, 7, 16, 0) 62%);
+  }
+
+  /* 关闭壁纸：退回原来的不透 mesh 渐变 */
+  .amb.no-wall .amb-mesh {
+    background:
+      radial-gradient(120% 90% at 12% 6%, #1b1740 0%, rgba(27, 23, 64, 0) 55%),
+      radial-gradient(100% 80% at 92% 12%, #10294d 0%, rgba(16, 41, 77, 0) 50%),
+      radial-gradient(120% 100% at 70% 104%, #0d3a45 0%, rgba(13, 58, 69, 0) 58%),
+      linear-gradient(160deg, #0b0b1c 0%, #07070f 48%, #05050c 100%);
+  }
+  .amb.no-wall .wall,
+  .amb.no-wall .wall-fog,
+  .amb.no-wall .wall-grade {
+    display: none;
+  }
+
+  .amb-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: calc(0.62 * var(--q));
+    mix-blend-mode: screen;
+    will-change: transform;
+  }
+
+  /* 有壁纸时把光斑压下去，否则会把画面糊掉 */
+  .amb.has-wall .amb-blob {
+    opacity: calc(0.32 * var(--q));
+  }
+  .amb.has-wall .grid-faint {
+    opacity: 0.6;
+  }
+  .amb.has-wall .grain {
+    opacity: calc(0.05 * var(--q) + 0.014);
+  }
+
+  /* 灵感页 / 任务页：让壁纸真正透出来。
+     默认 mesh 的 alpha 在 0.74~0.86，等于把壁纸盖住了，
+     这两屏的主题就是各自的背景图，所以单独把 mesh 与调色层压薄。 */
+  .amb[data-focus='dream'] .amb-mesh,
+  .amb[data-focus='mission'] .amb-mesh,
+  .amb[data-focus='archive'] .amb-mesh,
+  .amb[data-focus='connect'] .amb-mesh,
+  .amb[data-focus='qbank'] .amb-mesh,
+  .amb[data-focus='login'] .amb-mesh {
+    opacity: 0.44;
+  }
+
+  /* 第七页要"直接用原图"，而 .amb-mesh 最内层是 74%~86% 不透明的近黑渐变，
+     是压暗的绝对主力 —— 所以这一页单独压到更低，壁纸才真正透出来。 */
+  .amb[data-focus='retro'] .amb-mesh {
+    opacity: 0.18;
+  }
+  .amb[data-focus='dream'] .wall-fog,
+  .amb[data-focus='mission'] .wall-fog,
+  .amb[data-focus='archive'] .wall-fog,
+  .amb[data-focus='connect'] .wall-fog,
+  .amb[data-focus='qbank'] .wall-fog,
+  .amb[data-focus='login'] .wall-fog {
+    opacity: 0.5;
+  }
+
+  .amb[data-focus='retro'] .wall-fog {
+    opacity: 0.24;
+  }
+  .amb[data-focus='dream'] .wall-grade,
+  .amb[data-focus='mission'] .wall-grade,
+  .amb[data-focus='archive'] .wall-grade,
+  .amb[data-focus='connect'] .wall-grade,
+  .amb[data-focus='qbank'] .wall-grade,
+  .amb[data-focus='login'] .wall-grade {
+    opacity: 0.62;
+  }
+
+  .amb[data-focus='retro'] .wall-grade {
+    opacity: 0.3;
+  }
+  .amb[data-focus='dream'] .amb-blob,
+  .amb[data-focus='mission'] .amb-blob,
+  .amb[data-focus='archive'] .amb-blob,
+  .amb[data-focus='connect'] .amb-blob,
+  .amb[data-focus='qbank'] .amb-blob,
+  .amb[data-focus='login'] .amb-blob {
+    opacity: calc(0.2 * var(--q));
+  }
+
+  .amb[data-focus='retro'] .amb-blob {
+    opacity: calc(0.1 * var(--q));
+  }
+  .amb-blob.b1 {
+    width: 46vw;
+    height: 46vw;
+    left: -8vw;
+    top: -10vw;
+    background: radial-gradient(circle at 40% 40%, rgba(122, 92, 255, 0.9), rgba(122, 92, 255, 0) 68%);
+    animation: drift1 34s ease-in-out infinite;
+  }
+  .amb-blob.b2 {
+    width: 40vw;
+    height: 40vw;
+    right: -6vw;
+    top: 4vw;
+    background: radial-gradient(circle at 55% 45%, rgba(48, 122, 255, 0.8), rgba(48, 122, 255, 0) 68%);
+    animation: drift2 44s ease-in-out infinite;
+  }
+  .amb-blob.b3 {
+    width: 52vw;
+    height: 52vw;
+    left: 22vw;
+    bottom: -24vw;
+    background: radial-gradient(circle at 50% 50%, rgba(22, 196, 190, 0.7), rgba(22, 196, 190, 0) 70%);
+    animation: drift3 52s ease-in-out infinite;
+  }
+  /* 第四团光：放在胶囊区域背后，让玻璃真的有东西可以"折射" */
+  .amb-blob.b4 {
+    width: 34vw;
+    height: 34vw;
+    left: 30vw;
+    top: 22vh;
+    background: radial-gradient(circle at 50% 50%, rgba(150, 96, 255, 0.5), rgba(150, 96, 255, 0) 70%);
+    animation: drift1 40s ease-in-out infinite reverse;
+  }
+
+  /* 噪点：消除大面积渐变的色带 */
+  .grain {
+    position: absolute;
+    inset: -50%;
+    background-image: var(--noise);
+    opacity: calc(0.05 * var(--q) + 0.015);
+    mix-blend-mode: overlay;
+  }
+
+  /* 极细网格：给"高级感"一点秩序感 */
+  .grid-faint {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 72px 72px;
+    mask-image: radial-gradient(120% 90% at 20% 18%, #000 0%, transparent 72%);
+  }
+
+  /* 中文标题字体：汉仪青云简（WPS 同款）。
+     ⚠️ 不是 Windows 系统字体，本机没装时按后面的中文回退，
+     不能回退到 cursive / Segoe Script —— 拉丁手写体没有汉字字形，
+     中文会掉成默认黑体，等于字体没生效。 */
+  .font-cn-title {
+    font-family: '汉仪青云简','HYQiYunJian','汉仪青云简W','汉仪青云简 简','华文行楷','STXingkai','楷体','KaiTi','STKaiti',serif;
+  }
+
+  /* ---------------------------- 2. 玻璃本体 ---------------------------- */
+
+  .glass {
+    backdrop-filter: blur(calc(18px * var(--q) + 2px)) saturate(1.7);
+    -webkit-backdrop-filter: blur(calc(18px * var(--q) + 2px)) saturate(1.7);
+    background: linear-gradient(
+      140deg,
+      rgba(255, 255, 255, 0.14),
+      rgba(255, 255, 255, 0.055) 46%,
+      rgba(255, 255, 255, 0.09)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.34),
+      inset 0 -14px 30px -18px rgba(255, 255, 255, 0.16),
+      0 18px 44px -22px rgba(0, 0, 0, 0.7);
+  }
+
+  /* 玻璃上的镜面高光，配合 --mx/--my 跟随鼠标 */
+  .spec::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.45s ease;
+    background: radial-gradient(
+      220px circle at var(--mx, 50%) var(--my, 50%),
+      rgba(255, 255, 255, 0.22),
+      rgba(255, 255, 255, 0) 62%
+    );
+  }
+  .spec:hover::after {
+    opacity: calc(var(--q) * 0.9 + 0.1);
+  }
+
+  /* 薄雾玻璃：首页胶囊 / 头像盘用。
+     比 .glass 明显更透（模糊与染色都降一档），但比 .glass-clear 多留一点
+     存在感 —— 首页壁纸是暗色夜空，纯 .glass-clear 会让胶囊从画面上消失，
+     失去"可以点"的暗示。 */
+  .glass-airy {
+    backdrop-filter: blur(calc(9px * var(--q) + 1px)) saturate(1.42);
+    -webkit-backdrop-filter: blur(calc(9px * var(--q) + 1px)) saturate(1.42);
+    background: linear-gradient(
+      140deg,
+      rgba(255, 255, 255, 0.105),
+      rgba(255, 255, 255, 0.028) 46%,
+      rgba(255, 255, 255, 0.07)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.185);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      0 16px 42px -24px rgba(0, 0, 0, 0.62);
+  }
+
+  /* 更透的玻璃：给"要被背景图穿透"的大面板用（灵感页）。
+     比 .glass 更淡的白色染色 + 更轻的模糊，让壁纸的颜色直接透上来。
+     注意别全局替换 .glass —— 默认那张夜空壁纸很暗，
+     面板再透就没有承托感了，文字会飘。 */
+  .glass-clear {
+    backdrop-filter: blur(calc(7px * var(--q) + 1px)) saturate(1.28);
+    -webkit-backdrop-filter: blur(calc(7px * var(--q) + 1px)) saturate(1.28);
+    background: linear-gradient(
+      140deg,
+      rgba(255, 255, 255, 0.1),
+      rgba(255, 255, 255, 0.028) 48%,
+      rgba(255, 255, 255, 0.065)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.17);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      0 18px 44px -24px rgba(0, 0, 0, 0.6);
+  }
+
+  /* 面板内部的条目：只用极淡的白色浮层区分层级，不再叠深色底 */
+  .mat-clear {
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(calc(3px * var(--q)));
+    -webkit-backdrop-filter: blur(calc(3px * var(--q)));
+  }
+  .mat-clear:hover {
+    background: rgba(255, 255, 255, 0.095);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+
+  /* ---------------------------- 长文本容器 ---------------------------- */
+
+  .deco {
+    background: linear-gradient(180deg, rgba(13, 15, 30, 0.9), rgba(9, 10, 22, 0.94));
+    border: 1px solid rgba(255, 255, 255, 0.075);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 20px 50px -26px rgba(0, 0, 0, 0.85);
+  }
+
+  .mat {
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.065);
+  }
+  .mat:hover {
+    background: rgba(255, 255, 255, 0.062);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  /* ---------------------------- 圆环折射 ---------------------------- */
+
+  .ring-refract {
+    mix-blend-mode: screen;
+    opacity: 0.5;
+  }
+
+  /* ---------------------------- Markdown 排版 ---------------------------- */
+
+  .md {
+    font-size: 14.5px;
+    line-height: 1.85;
+    color: #d8dcf2;
+  }
+  .md > *:first-child {
+    margin-top: 0;
+  }
+  .md h1,
+  .md h2,
+  .md h3,
+  .md h4 {
+    color: #fff;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    margin: 1.5em 0 0.6em;
+    line-height: 1.35;
+  }
+  .md h1 {
+    font-size: 1.5em;
+  }
+  .md h2 {
+    font-size: 1.25em;
+    padding-bottom: 0.35em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  }
+  .md h3 {
+    font-size: 1.08em;
+  }
+  .md p {
+    margin: 0.85em 0;
+  }
+  .md strong {
+    color: #fff;
+    font-weight: 650;
+  }
+  .md em {
+    color: #c8cdf0;
+  }
+  .md a {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .md ul,
+  .md ol {
+    margin: 0.8em 0;
+    padding-left: 1.35em;
+  }
+  .md li {
+    margin: 0.35em 0;
+  }
+  .md li::marker {
+    color: #8a91b8;
+  }
+  .md blockquote {
+    margin: 1em 0;
+    padding: 0.55em 1em;
+    border-left: 2px solid rgba(143, 178, 255, 0.6);
+    background: rgba(143, 178, 255, 0.07);
+    border-radius: 0 10px 10px 0;
+    color: #c2c8e6;
+  }
+  .md code:not(pre code) {
+    font-family: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+    font-size: 0.88em;
+    background: rgba(143, 178, 255, 0.14);
+    color: #bcd0ff;
+    padding: 0.15em 0.42em;
+    border-radius: 6px;
+  }
+  .md table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1em 0;
+    font-size: 0.94em;
+  }
+  .md th,
+  .md td {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.5em 0.7em;
+    text-align: left;
+  }
+  .md th {
+    background: rgba(255, 255, 255, 0.055);
+    color: #fff;
+    font-weight: 600;
+  }
+  .md hr {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 1.6em 0;
+  }
+  .md .task {
+    list-style: none;
+    margin-left: -1.15em;
+  }
+  .md .task .box {
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    margin-right: 0.5em;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    vertical-align: -1px;
+  }
+  .md .task .box.on {
+    background: linear-gradient(140deg, #8fb2ff, #b08cff);
+    border-color: transparent;
+    box-shadow: 0 0 10px rgba(143, 178, 255, 0.5);
+  }
+
+  /* ---------------------------- 代码块 ---------------------------- */
+
+  .code {
+    margin: 1em 0;
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(6, 7, 16, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.085);
+  }
+  .code-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #7e85a6;
+    background: rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  }
+  .code pre {
+    margin: 0;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+    font-size: 12.8px;
+    line-height: 1.7;
+    color: #cdd3ee;
+  }
+  .code-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16);
+  }
+
+  .tok-key {
+    color: #c792ea;
+  }
+  .tok-str {
+    color: #a5e6a0;
+  }
+  .tok-num {
+    color: #ffcb8b;
+  }
+  .tok-com {
+    color: #6a7194;
+    font-style: italic;
+  }
+  .tok-fn {
+    color: #82d2ff;
+  }
+  .tok-type {
+    color: #7ee0d0;
+  }
+
+  /* ---------------------------- 状态呼吸 ---------------------------- */
+
+  .breathe {
+    animation: breathe 4.2s ease-in-out infinite;
+  }
+
+  .sheen-text {
+    background: linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.55) 0%,
+      #ffffff 42%,
+      rgba(255, 255, 255, 0.55) 62%,
+      rgba(255, 255, 255, 0.55) 100%
+    );
+    background-size: 220% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: sheen 5.5s linear infinite;
+  }
+}
+
+/* ==========================================================================
+   关键帧
+   ========================================================================== */
+
+@keyframes drift1 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(9vw, 6vw, 0) scale(1.14);
+  }
+}
+@keyframes drift2 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1.06);
+  }
+  50% {
+    transform: translate3d(-7vw, 9vw, 0) scale(0.94);
+  }
+}
+@keyframes drift3 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(0.96);
+  }
+  50% {
+    transform: translate3d(-11vw, -6vw, 0) scale(1.12);
+  }
+}
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.88;
+  }
+}
+@keyframes sheen {
+  0% {
+    background-position: -140% 0;
+  }
+  100% {
+    background-position: 240% 0;
+  }
+}
+
+/* ==========================================================================
+   应用级覆盖：画质降级 / 无障碍降级 / 小屏兜底。
+   刻意留在 @layer 之外，因为必须能压过任意 utilities —— 用 !important 明确表达。
+   ========================================================================== */
+
+[data-quality='mid'] {
+  --q: 0.6;
+}
+[data-quality='eco'] {
+  --q: 0;
+}
+[data-quality='eco'] .amb-blob {
+  animation: none !important;
+}
+[data-quality='eco'] .grain {
+  opacity: 0 !important;
+}
+[data-quality='eco'] .ring-refract {
+  display: none;
+}
+[data-quality='eco'] .glass,
+[data-quality='eco'] .glass-btn {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(20, 22, 40, 0.9) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass-btn {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: #15172b !important;
+  }
+  .amb-blob,
+  .grain,
+  .grid-faint {
+    display: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  .layout-shell {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 26px;
+    padding: 10vh 6vw 6vh;
+    overflow-y: auto;
+  }
+  .pill {
+    width: min(78vw, 520px) !important;
+  }
+  .pill-sub {
+    display: none;
+  }
+}
+
+/* ---------------- 数学公式 ----------------
+   KaTeX 自己管字号和排版，这里只补两件它不管的事：
+   ① 宽公式（矩阵、长推导）要能横向滚，否则会被裁掉右边
+   ② 块级公式上下留点空，不然会贴住相邻段落 */
+.math-block {
+  margin: 14px 0;
+  padding: 2px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.math-block .katex-display {
+  margin: 0;
+}
+/* 行内公式不该把行高撑开 */
+.md .katex {
+  font-size: 1.02em;
+}
+
+/* ---------------- Word（mammoth 转出来的 HTML） ----------------
+   复用 .md 那套标题/列表/表格排版，这里只补 mammoth 特有的东西 */
+.docx-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+  margin: 10px 0;
+}
+/* Word 的表格常常没有边框，这里补上，否则一片糊 */
+.docx-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+}
+.docx-body th,
+.docx-body td {
+  border: 1px solid rgb(255 255 255 / .16);
+  padding: 6px 10px;
+  text-align: left;
+}
+.docx-body p {
+  margin: 8px 0;
+}
+
+
+/* ---------------- 长名称流动显示 ----------------
+   课程名经常超长（"通识示例课程一[01]"），
+   直接 truncate 会把关键信息截掉，而换行又会让卡片高度不一致。
+
+   做法：默认静止，**悬停时才滚动**。
+   为什么不一直滚：一屏十几个卡片同时滚动会很吵，而且用户
+   扫视时反而更难读。悬停滚动的意图很明确 —— "我想看全"。
+
+   滚动量用 --marquee-shift 由 JS 传入（= 文字宽 - 容器宽），
+   这样不同长度的名字都能恰好滚到底，不会滚过头或没滚完。 */
+.marquee {
+  overflow: hidden;
+  white-space: nowrap;
+  /* 用 mask 而不是渐变背景：卡片底色是半透明的，渐变会对不上 */
+  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 16px), transparent 100%);
+}
+.marquee > span {
+  display: inline-block;
+  will-change: transform;
+}
+.marquee:hover > span,
+.marquee:focus-visible > span {
+  animation: marquee-scroll var(--marquee-dur, 4s) ease-in-out infinite alternate;
+}
+@keyframes marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    /* 由 JS 算好实际需要移动的距离 —— 写死百分比在不同长度上都不对 */
+    transform: translateX(var(--marquee-shift, 0px));
+  }
+}
