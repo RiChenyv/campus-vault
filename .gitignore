@@ -62,3 +62,5 @@ tools/cloudflared
 #     GitHub 仓库的历史是永久的 —— 推上去之后删文件也还留在旧提交里。
 #     以后想把截图放进 README，先把带真实信息的那几张删掉或打码。
 docs/screenshots/
+# ---- archify 的工作区（图源与成品已放进 docs/，这里不进仓库）----
+.archify/

@@ -1,0 +1,585 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Campus Vault · 首页界面结构与入口",
+    "locale": "zh-CN",
+    "output": ".archify/architecture-home-ui-20261012-174257/home-ui.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/RiChenyv/campus-vault",
+      "provider": "github",
+      "revision": "d1d67d9fc95cd1305d7d13f86158139823615d5d"
+    }
+  },
+  "components": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "使用者",
+      "sublabel": "浏览器 · 手机",
+      "pos": [
+        20,
+        300
+      ],
+      "size": [
+        140,
+        76
+      ],
+      "icon": "person",
+      "sources": [
+        {
+          "path": "README.md",
+          "line": 9,
+          "end_line": 11,
+          "label": "前后端地址"
+        }
+      ]
+    },
+    {
+      "id": "home",
+      "type": "frontend",
+      "label": "首页",
+      "sublabel": "纵向 7 屏 · 滚轮翻页",
+      "pos": [
+        240,
+        290
+      ],
+      "size": [
+        200,
+        96
+      ],
+      "icon": "frontend",
+      "sources": [
+        {
+          "path": "src/App.tsx",
+          "line": 496,
+          "end_line": 646,
+          "label": "七屏"
+        }
+      ]
+    },
+    {
+      "id": "ring",
+      "type": "frontend",
+      "label": "头像导航",
+      "sublabel": "四个功能名 · 悬停显现",
+      "pos": [
+        520,
+        250
+      ],
+      "size": [
+        200,
+        96
+      ],
+      "icon": "person",
+      "sources": [
+        {
+          "path": "src/components/LiquidRing.tsx",
+          "line": 115,
+          "end_line": 122,
+          "label": "组件入参"
+        },
+        {
+          "path": "src/components/LiquidRing.tsx",
+          "line": 416,
+          "label": "打开个人面板"
+        },
+        {
+          "path": "src/data/nav.ts",
+          "line": 8,
+          "end_line": 41,
+          "label": "四段站点地图"
+        }
+      ]
+    },
+    {
+      "id": "profile",
+      "type": "frontend",
+      "label": "个人中心",
+      "sublabel": "居中模态浮层",
+      "pos": [
+        520,
+        90
+      ],
+      "size": [
+        200,
+        76
+      ],
+      "icon": "person",
+      "sources": [
+        {
+          "path": "src/components/ProfileCenter.tsx",
+          "line": 57,
+          "label": "组件"
+        },
+        {
+          "path": "src/App.tsx",
+          "line": 746,
+          "label": "顶层渲染"
+        }
+      ]
+    },
+    {
+      "id": "questions",
+      "type": "frontend",
+      "label": "题库",
+      "sublabel": "第 4 屏 · 资料库",
+      "pos": [
+        800,
+        20
+      ],
+      "size": [
+        200,
+        68
+      ],
+      "sources": [
+        {
+          "path": "src/data/nav.ts",
+          "line": 10,
+          "end_line": 16,
+          "label": "圆环第 1 段"
+        },
+        {
+          "path": "src/App.tsx",
+          "line": 585,
+          "label": "第四屏"
+        }
+      ]
+    },
+    {
+      "id": "ideas",
+      "type": "frontend",
+      "label": "灵感",
+      "sublabel": "第 2 屏 · 速记收件箱",
+      "pos": [
+        800,
+        130
+      ],
+      "size": [
+        200,
+        68
+      ],
+      "sources": [
+        {
+          "path": "src/data/nav.ts",
+          "line": 18,
+          "end_line": 24,
+          "label": "圆环第 2 段"
+        },
+        {
+          "path": "src/App.tsx",
+          "line": 539,
+          "label": "第二屏"
+        }
+      ]
+    },
+    {
+      "id": "todos",
+      "type": "frontend",
+      "label": "待办",
+      "sublabel": "第 3 屏 · DDL 与优先级",
+      "pos": [
+        800,
+        240
+      ],
+      "size": [
+        200,
+        68
+      ],
+      "sources": [
+        {
+          "path": "src/data/nav.ts",
+          "line": 26,
+          "end_line": 32,
+          "label": "圆环第 3 段"
+        },
+        {
+          "path": "src/App.tsx",
+          "line": 568,
+          "label": "第三屏"
+        }
+      ]
+    },
+    {
+      "id": "calendar",
+      "type": "frontend",
+      "label": "日历与热力图",
+      "sublabel": "第 5 屏 · 月度总览",
+      "pos": [
+        800,
+        350
+      ],
+      "size": [
+        200,
+        68
+      ],
+      "icon": "calendar",
+      "sources": [
+        {
+          "path": "src/data/nav.ts",
+          "line": 34,
+          "end_line": 40,
+          "label": "圆环第 4 段"
+        },
+        {
+          "path": "src/App.tsx",
+          "line": 604,
+          "label": "第五屏"
+        }
+      ]
+    },
+    {
+      "id": "pills",
+      "type": "frontend",
+      "label": "三条玻璃胶囊",
+      "sublabel": "右侧常驻主入口",
+      "pos": [
+        520,
+        620
+      ],
+      "size": [
+        200,
+        96
+      ],
+      "sources": [
+        {
+          "path": "src/components/PillNav.tsx",
+          "line": 127,
+          "label": "副标题"
+        },
+        {
+          "path": "src/data/nav.ts",
+          "line": 44,
+          "end_line": 74,
+          "label": "三条胶囊"
+        }
+      ]
+    },
+    {
+      "id": "courses",
+      "type": "frontend",
+      "label": "我的课程",
+      "sublabel": "胶囊 ① · 课程卡片网格",
+      "pos": [
+        800,
+        500
+      ],
+      "size": [
+        200,
+        68
+      ],
+      "sources": [
+        {
+          "path": "src/views/CoursesView.tsx",
+          "line": 291,
+          "label": "页面"
+        },
+        {
+          "path": "src/data/nav.ts",
+          "line": 46,
+          "end_line": 54,
+          "label": "胶囊 ①"
+        }
+      ]
+    },
+    {
+      "id": "schedule",
+      "type": "frontend",
+      "label": "我的课表",
+      "sublabel": "胶囊 ② · 周课表",
+      "pos": [
+        800,
+        620
+      ],
+      "size": [
+        200,
+        68
+      ],
+      "sources": [
+        {
+          "path": "src/views/ScheduleView.tsx",
+          "line": 16,
+          "label": "页面"
+        },
+        {
+          "path": "src/data/nav.ts",
+          "line": 56,
+          "end_line": 64,
+          "label": "胶囊 ②"
+        }
+      ]
+    },
+    {
+      "id": "notes",
+      "type": "frontend",
+      "label": "我的笔记",
+      "sublabel": "胶囊 ③ · 资料库 + 阅读器",
+      "pos": [
+        800,
+        740
+      ],
+      "size": [
+        200,
+        68
+      ],
+      "sources": [
+        {
+          "path": "src/views/NotesView.tsx",
+          "line": 116,
+          "label": "页面"
+        },
+        {
+          "path": "src/data/nav.ts",
+          "line": 66,
+          "end_line": 73,
+          "label": "胶囊 ③"
+        }
+      ]
+    },
+    {
+      "id": "courseDetail",
+      "type": "frontend",
+      "label": "课程详情",
+      "sublabel": "笔记 · 题库 · 课表位置",
+      "pos": [
+        1120,
+        480
+      ],
+      "size": [
+        200,
+        68
+      ],
+      "sources": [
+        {
+          "path": "src/views/CourseDetail.tsx",
+          "line": 29,
+          "label": "页面"
+        },
+        {
+          "path": "src/data/nav.ts",
+          "line": 79,
+          "end_line": 85,
+          "label": "二级页面"
+        }
+      ]
+    },
+    {
+      "id": "credits",
+      "type": "frontend",
+      "label": "学分总览",
+      "sublabel": "占比扇形图 · 成绩明细",
+      "pos": [
+        1120,
+        600
+      ],
+      "size": [
+        200,
+        68
+      ],
+      "sources": [
+        {
+          "path": "src/views/CreditsView.tsx",
+          "line": 75,
+          "label": "页面"
+        },
+        {
+          "path": "src/data/nav.ts",
+          "line": 87,
+          "end_line": 93,
+          "label": "二级页面"
+        }
+      ]
+    },
+    {
+      "id": "palette",
+      "type": "frontend",
+      "label": "命令面板",
+      "sublabel": "跨课程 / 文件 / 待办搜索",
+      "pos": [
+        100,
+        620
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/components/CommandPalette.tsx",
+          "line": 82,
+          "label": "组件"
+        },
+        {
+          "path": "src/App.tsx",
+          "line": 739,
+          "label": "顶层渲染"
+        }
+      ]
+    },
+    {
+      "id": "quality",
+      "type": "frontend",
+      "label": "连接状态 · 画质",
+      "sublabel": "详情页右上角 · 右下角",
+      "pos": [
+        300,
+        620
+      ],
+      "size": [
+        195,
+        80
+      ],
+      "sources": [
+        {
+          "path": "src/components/Shell.tsx",
+          "line": 62,
+          "end_line": 65,
+          "label": "右上角连接状态徽标"
+        },
+        {
+          "path": "src/components/QualityControl.tsx",
+          "line": 8,
+          "end_line": 18,
+          "label": "三档画质"
+        },
+        {
+          "path": "src/App.tsx",
+          "line": 728,
+          "end_line": 736,
+          "label": "右下角渲染"
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "user-opens-home",
+      "from": "user",
+      "to": "home",
+      "label": "打开网站",
+      "variant": "emphasis"
+    },
+    {
+      "id": "home-renders-ring",
+      "from": "home",
+      "to": "ring",
+      "label": "第一屏内"
+    },
+    {
+      "id": "home-renders-pills",
+      "from": "home",
+      "to": "pills",
+      "label": "右侧固定"
+    },
+    {
+      "id": "home-opens-palette",
+      "from": "home",
+      "to": "palette",
+      "label": "Ctrl / Cmd + K"
+    },
+    {
+      "id": "home-opens-quality",
+      "from": "home",
+      "to": "quality",
+      "label": "常驻"
+    },
+    {
+      "id": "ring-opens-profile",
+      "from": "ring",
+      "to": "profile",
+      "label": "点头像",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "ring-to-questions",
+      "from": "ring",
+      "to": "questions",
+      "label": "点功能名",
+      "fromSide": "top",
+      "toSide": "left"
+    },
+    {
+      "id": "ring-to-ideas",
+      "from": "ring",
+      "to": "ideas",
+      "label": "点功能名",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "ring-to-todos",
+      "from": "ring",
+      "to": "todos",
+      "label": "点功能名",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "ring-to-calendar",
+      "from": "ring",
+      "to": "calendar",
+      "label": "点功能名",
+      "fromSide": "bottom",
+      "toSide": "left"
+    },
+    {
+      "id": "pills-to-courses",
+      "from": "pills",
+      "to": "courses",
+      "label": "打开"
+    },
+    {
+      "id": "pills-to-schedule",
+      "from": "pills",
+      "to": "schedule",
+      "label": "打开"
+    },
+    {
+      "id": "pills-to-notes",
+      "from": "pills",
+      "to": "notes",
+      "label": "打开"
+    },
+    {
+      "id": "courses-to-detail",
+      "from": "courses",
+      "to": "courseDetail",
+      "label": "点卡片"
+    },
+    {
+      "id": "courses-to-credits",
+      "from": "courses",
+      "to": "credits",
+      "label": "点「在修课程」"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "首页 = 纵向 7 屏",
+      "items": [
+        "主页 · 灵感 · 任务 · 题库 · 日历与热力图 · 宝藏网址 · GitHub",
+        "滚轮与方向键翻页，Esc 回第一屏（src/App.tsx L496–L646）"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "胶囊副标题是实时算的",
+      "items": [
+        "课程数 / 本学期第几周 / 笔记数来自 /api，不写死",
+        "拿不到就留空 —— 宁可什么都不显示，也不显示错的（src/data/nav.ts L109–L127）",
+        "「我的课表」那条写死的「18 节课 · 周三最满」已按这条原则删掉"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "两个顶层浮层",
+      "items": [
+        "个人中心由 App 顶层渲染：环形导航带 transform，会改变 fixed 的包含块（src/App.tsx L746）",
+        "命令面板对课程 / 文件 / 待办 / 题目 / 灵感做加权模糊搜索（src/components/CommandPalette.tsx）"
+      ]
+    }
+  ]
+}
