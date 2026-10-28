@@ -11,6 +11,11 @@
 数据  server/data/vault.db + server/data/files/
 ```
 
+> **部署**：要走公网见 [`上线部署.md`](上线部署.md)（一条隧道即可，后端自己托管网页）。
+> ⚠️ **不能部署到 GitHub Pages** —— 它是纯静态托管，而这个站点的登录、数据库、
+> 文件上传、各种导入都需要常驻的 Node 进程。完整原因见
+> [`docs/why-not-github-pages.md`](docs/why-not-github-pages.md)。
+
 ---
 
 ## 快速开始
